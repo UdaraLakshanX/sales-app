@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sales & Credit Manager (Offline PWA)</title>
+
+    <!-- PWA Primary Meta Tags -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SalesCredit">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome Icons via CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar for tables */
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased select-none sm:select-auto">
+
+    <!-- Top Navigation Bar (Slate-900 Dark Theme) -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                
+                <!-- Logo & Brand Name -->
+                <div class="flex items-center space-x-3">
+                    <button onclick="switchTab('dashboard')" class="flex items-center space-x-2 text-white font-bold text-lg sm:text-xl tracking-tight focus:outline-none">
+                        <span class="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow">
+                            <i class="fa-solid fa-truck-ramp-box text-sm"></i>
+                        </span>
+                        <span>Distro<span class="text-indigo-400">Pay</span></span>
+                    </button>
+                    <!-- Offline / PWA Status Badge -->
+                    <span id="pwa-status-badge" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span> Offline Ready
+                    </span>
+                </div>
+
+                <!-- Desktop Navigation Links (Hidden on small screens, bottom nav takes over) -->
+                <nav class="hidden md:flex items-center space-x-1 lg:space-x-2">
+                    <button onclick="switchTab('dashboard')" data-tab-nav="dashboard" class="tab-link px-3 py-2 rounded-lg text-sm font-medium transition bg-slate-800 text-indigo-400 font-semibold">
+                        <i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('shops')" data-tab-nav="shops" class="tab-link px-3 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-store mr-1.5"></i> Shops
+                    </button>
+                    <button onclick="switchTab('products')" data-tab-nav="products" class="tab-link px-3 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-boxes-stacked mr-1.5"></i> Products
+                    </button>
+                    <button onclick="switchTab('new-sale')" data-tab-nav="new-sale" class="tab-link px-3 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-cart-plus mr-1.5"></i> New Sale
+                    </button>
+                    <button onclick="switchTab('payments')" data-tab-nav="payments" class="tab-link px-3 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-hand-holding-dollar mr-1.5"></i> Payments
+                    </button>
+                </nav>
+
+                <!-- Settings / Backup Action Button -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="openBackupModal()" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition" title="Backup & Restore Data">
+                        <i class="fa-solid fa-database mr-1.5 text-indigo-400"></i> Backup
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container with bottom padding for mobile navigation bar -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full pb-24 md:pb-8">
+
+        <!-- ============================================================ -->
+        <!-- VIEW 1: DASHBOARD                                            -->
+        <!-- ============================================================ -->
+        <section id="view-dashboard" class="tab-view">
+            <!-- Header -->
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
+                    <p class="text-sm text-slate-500 mt-1">Live distribution stats stored offline on this device.</p>
+                </div>
+                <div class="text-xs text-slate-400 font-medium">
+                    <i class="fa-solid fa-shield-halved text-emerald-500 mr-1"></i> 100% Private Local Storage
+                </div>
+            </div>
+
+            <!-- 4 Modern Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- Today's Sales -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Today's Sales</p>
+                            <h3 id="dash-today-sales" class="text-2xl font-bold text-slate-900 mt-1">Rs. 0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-chart-line text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs text-slate-500">
+                        <span class="inline-flex items-center text-indigo-600 font-medium mr-1.5">
+                            <i class="fa-solid fa-calendar-day mr-1"></i> Today
+                        </span>
+                        <span>Total billed orders</span>
+                    </div>
+                </div>
+
+                <!-- Cash Collected Today -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Cash Collected</p>
+                            <h3 id="dash-today-cash" class="text-2xl font-bold text-emerald-600 mt-1">Rs. 0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-hand-holding-dollar text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs text-slate-500">
+                        <span class="inline-flex items-center text-emerald-600 font-medium mr-1.5">
+                            <i class="fa-solid fa-arrow-down mr-1"></i> Today
+                        </span>
+                        <span>Sales cash + settlements</span>
+                    </div>
+                </div>
+
+                <!-- Total Receivable -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Receivable</p>
+                            <h3 id="dash-total-receivable" class="text-2xl font-bold text-amber-600 mt-1">Rs. 0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-wallet text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs text-slate-500">
+                        <span class="inline-flex items-center text-amber-600 font-medium mr-1.5">
+                            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Market Credit
+                        </span>
+                        <span>Total outstanding credit</span>
+                    </div>
+                </div>
+
+                <!-- Due Today / Overdue -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Due Today / Overdue</p>
+                            <h3 id="dash-due-count" class="text-2xl font-bold text-rose-600 mt-1">0 Shops</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-bell text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs text-slate-500">
+                        <span class="inline-flex items-center text-rose-600 font-medium mr-1.5">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> Action Required
+                        </span>
+                        <span>Collection dues</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <button onclick="switchTab('new-sale')"
+                   class="flex items-center justify-center p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm hover:shadow transition text-base font-semibold space-x-3 group text-left">
+                    <span class="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center text-white group-hover:scale-105 transition">
+                        <i class="fa-solid fa-plus text-base"></i>
+                    </span>
+                    <div>
+                        <div class="font-bold">+ New Sale & Delivery</div>
+                        <div class="text-xs text-indigo-200 font-normal">Bill retail shop & deduct stock</div>
+                    </div>
+                </button>
+
+                <button onclick="switchTab('payments')"
+                   class="flex items-center justify-center p-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm hover:shadow transition text-base font-semibold space-x-3 group text-left">
+                    <span class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center text-white group-hover:scale-105 transition">
+                        <i class="fa-solid fa-receipt text-base"></i>
+                    </span>
+                    <div>
+                        <div class="font-bold">+ Collect Credit Payment</div>
+                        <div class="text-xs text-emerald-200 font-normal">Settle cash/cheque & update due</div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Dashboard Split: Payment Reminders & Low Stock Alerts -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Payment Reminders -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-xs">
+                                <i class="fa-solid fa-calendar-xmark"></i>
+                            </span>
+                            <h2 class="text-base font-bold text-slate-800">Payment Reminders (Due Today & Overdue)</h2>
+                        </div>
+                        <span id="dash-reminders-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                            0 pending
+                        </span>
+                    </div>
+                    <div id="dash-reminders-list" class="divide-y divide-slate-100">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Low Stock Alerts -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </span>
+                                <h2 class="text-base font-bold text-slate-800">Low Stock Alerts</h2>
+                            </div>
+                            <span id="dash-lowstock-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                                0 items
+                            </span>
+                        </div>
+                        <div id="dash-lowstock-list" class="divide-y divide-slate-100">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 border-t border-slate-200 text-center">
+                        <button onclick="switchTab('products')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 inline-flex items-center">
+                            <i class="fa-solid fa-boxes-stacked mr-1.5"></i> Restock Products & Inventory &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- VIEW 2: SHOPS                                                -->
+        <!-- ============================================================ -->
+        <section id="view-shops" class="tab-view hidden">
+            <!-- Header -->
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Shop Management</h1>
+                    <p class="text-sm text-slate-500 mt-1">Manage retail stores, routes, balances, and WhatsApp reminders.</p>
+                </div>
+                <div>
+                    <button id="toggle-shop-form-btn" type="button" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition">
+                        <i id="toggle-shop-icon" class="fa-solid fa-plus mr-2 text-xs"></i>
+                        <span id="toggle-shop-text">Add New Shop</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add Shop Form Card (Collapsible) -->
+            <div id="add-shop-card" class="mb-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-store text-indigo-600 mr-2"></i> Register New Shop
+                    </h2>
+                    <span class="text-xs text-slate-400">Local Database</span>
+                </div>
+                <form id="form-add-shop" class="p-5 sm:p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Shop Name <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="shop-name-input" required placeholder="e.g. Saman Supermart"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Owner Name
+                            </label>
+                            <input type="text" id="shop-owner-input" placeholder="e.g. Saman Perera"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Phone (WhatsApp) <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="tel" id="shop-phone-input" required placeholder="e.g. 0771234567"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Delivery Route
+                            </label>
+                            <input type="text" id="shop-route-input" placeholder="e.g. Colombo Route 1"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                        </div>
+                    </div>
+                    <div class="mt-5 flex justify-end">
+                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg shadow-sm transition">
+                            <i class="fa-solid fa-check mr-2"></i> Save Shop
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Instant Search Bar -->
+            <div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="relative flex-1 max-w-md">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </span>
+                    <input type="text" id="search-shops-input" placeholder="Instant search by shop name, owner, or route..."
+                           class="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+                </div>
+                <div class="text-xs sm:text-sm font-medium text-slate-500">
+                    <span class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                        Total Shops: <strong id="shops-count-badge" class="text-slate-800">0</strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Shops Cards Grid -->
+            <div id="shops-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- VIEW 3: PRODUCTS                                             -->
+        <!-- ============================================================ -->
+        <section id="view-products" class="tab-view hidden">
+            <!-- Header -->
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Product & Stock Management</h1>
+                    <p class="text-sm text-slate-500 mt-1">Track wholesale inventory, unit costs, selling prices, and profits.</p>
+                </div>
+                <div>
+                    <button id="toggle-product-form-btn" type="button" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition">
+                        <i id="toggle-product-icon" class="fa-solid fa-plus mr-2 text-xs"></i>
+                        <span id="toggle-product-text">Add New Product</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add Product Form Card (Collapsible) -->
+            <div id="add-product-card" class="mb-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-box text-indigo-600 mr-2"></i> Add Product to Inventory
+                    </h2>
+                    <span class="text-xs text-slate-400">Inventory Catalog</span>
+                </div>
+                <form id="form-add-product" class="p-5 sm:p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="sm:col-span-2 lg:col-span-1">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Product Name <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="prod-name-input" required placeholder="e.g. Milk Powder 400g"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Cost Price (Rs.) <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number" step="0.01" min="0" id="prod-cost-input" required placeholder="0.00"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Selling Price (Rs.) <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number" step="0.01" min="0" id="prod-selling-input" required placeholder="0.00"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                                Initial Stock (Units)
+                            </label>
+                            <input type="number" min="0" id="prod-stock-input" value="0"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800 font-semibold">
+                        </div>
+                    </div>
+                    <div class="mt-5 flex justify-end">
+                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg shadow-sm transition">
+                            <i class="fa-solid fa-check mr-2"></i> Save Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Instant Search Bar -->
+            <div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="relative flex-1 max-w-md">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </span>
+                    <input type="text" id="search-products-input" placeholder="Instant search by product name..."
+                           class="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+                </div>
+                <div class="text-xs sm:text-sm font-medium text-slate-500">
+                    <span class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                        Total Products: <strong id="products-count-badge" class="text-slate-800">0</strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Products Cards Grid -->
+            <div id="products-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- VIEW 4: NEW SALE                                             -->
+        <!-- ============================================================ -->
+        <section id="view-new-sale" class="tab-view hidden">
+            <!-- Header -->
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">New Sale & Delivery</h1>
+                    <p class="text-sm text-slate-500 mt-1">Record wholesale delivery orders, auto-deduct inventory, and track credit.</p>
+                </div>
+            </div>
+
+            <!-- New Sale Form Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-cart-plus text-indigo-600 mr-2"></i> Record Sale / Order Entry
+                    </h2>
+                    <span class="text-xs text-slate-400">Stock automatically synced</span>
+                </div>
+
+                <form id="form-new-sale" class="p-5 sm:p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <!-- Select Shop -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                Select Shop <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="sale-shop-select" required
+                                    class="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                                <option value="">-- Choose Retail Shop --</option>
+                            </select>
+                        </div>
+
+                        <!-- Select Product -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                Select Product (In Stock) <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="sale-product-select" required
+                                    class="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                                <option value="">-- Choose Product --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Quantity, Paid Amount, Due Date Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-5">
+                        <!-- Quantity -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                Quantity <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number" min="1" id="sale-qty-input" value="1" required
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800 font-semibold">
+                            <p id="sale-stock-warning" class="text-xs text-rose-600 mt-1 hidden font-semibold">
+                                <i class="fa-solid fa-circle-exclamation mr-1"></i> Exceeds available stock!
+                            </p>
+                        </div>
+
+                        <!-- Paid Amount -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                Paid Amount (Rs.)
+                            </label>
+                            <input type="number" step="0.01" min="0" id="sale-paid-input" value="0.00"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800 font-semibold">
+                            <p class="text-[11px] text-slate-400 mt-1">Leave 0 for full credit sale</p>
+                        </div>
+
+                        <!-- Due Date -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                Due Date (If Credit)
+                            </label>
+                            <input type="date" id="sale-due-date-input"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800">
+                        </div>
+                    </div>
+
+                    <!-- Live Calculation Summary Card -->
+                    <div class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                        <div class="p-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Unit Price</span>
+                            <p id="calc-sale-unit-price" class="text-base font-bold text-slate-700 mt-0.5">Rs. 0.00</p>
+                        </div>
+                        <div class="p-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Available Stock</span>
+                            <p id="calc-sale-stock" class="text-base font-bold text-slate-700 mt-0.5">0 units</p>
+                        </div>
+                        <div class="p-2 border-t sm:border-t-0 sm:border-l border-slate-200">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">Total Amount</span>
+                            <p id="calc-sale-total" class="text-xl font-extrabold text-indigo-700 mt-0.5">Rs. 0.00</p>
+                        </div>
+                        <div class="p-2 border-t sm:border-t-0 sm:border-l border-slate-200">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-rose-500">Balance Due (Credit)</span>
+                            <p id="calc-sale-due" class="text-xl font-extrabold text-rose-600 mt-0.5">Rs. 0.00</p>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="mt-6 flex justify-end">
+                        <button id="sale-submit-btn" type="submit"
+                                class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-semibold text-sm rounded-lg shadow-sm transition">
+                            <i class="fa-solid fa-check mr-2"></i> Confirm & Save Sale
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Recent Sales List (Last 10) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-500 mr-2"></i> Last 10 Sales Orders
+                    </h2>
+                    <span class="text-xs text-slate-400">Offline Ledger</span>
+                </div>
+                <div id="recent-sales-table-container" class="overflow-x-auto">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- VIEW 5: PAYMENTS                                             -->
+        <!-- ============================================================ -->
+        <section id="view-payments" class="tab-view hidden">
+            <!-- Header -->
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Credit Payments & Collections</h1>
+                    <p class="text-sm text-slate-500 mt-1">Record cash/cheque settlements from retail shops and reduce credit dues.</p>
+                </div>
+            </div>
+
+            <!-- Record Payment Form Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-emerald-600 mr-2"></i> Record Credit Payment
+                    </h2>
+                    <span class="text-xs text-slate-400">Instant offline settlement</span>
+                </div>
+
+                <div id="payment-form-content">
+                    <form id="form-new-payment" class="p-5 sm:p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <!-- Shop Dropdown (Filtered to shops with total_due > 0) -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                    Select Shop With Outstanding Balance <span class="text-rose-500">*</span>
+                                </label>
+                                <select id="payment-shop-select" required
+                                        class="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-800">
+                                    <option value="">-- Choose Shop to Settle --</option>
+                                </select>
+                            </div>
+
+                            <!-- Payment Amount -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                    Payment Amount Received (Rs.) <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="number" step="0.01" min="0.01" id="payment-amount-input" required placeholder="0.00"
+                                       class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-800 font-semibold">
+                                <p id="payment-amount-warning" class="text-xs text-rose-600 mt-1 hidden font-semibold">
+                                    <i class="fa-solid fa-circle-exclamation mr-1"></i> Amount exceeds total due!
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Note -->
+                        <div class="mt-5">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                                Payment Note / Reference (Optional)
+                            </label>
+                            <input type="text" id="payment-note-input" placeholder="e.g. Cash collected by driver / Cheque #1029"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-800">
+                        </div>
+
+                        <!-- Live Calculation Summary -->
+                        <div class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <div class="p-2">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Current Outstanding Due</span>
+                                <p id="calc-pay-current-due" class="text-lg font-bold text-rose-600 mt-0.5">Rs. 0.00</p>
+                            </div>
+                            <div class="p-2 border-t sm:border-t-0 sm:border-l border-slate-200">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-600">Payment Amount</span>
+                                <p id="calc-pay-amount" class="text-lg font-bold text-emerald-600 mt-0.5">Rs. 0.00</p>
+                            </div>
+                            <div class="p-2 border-t sm:border-t-0 sm:border-l border-slate-200">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Remaining Balance</span>
+                                <p id="calc-pay-remaining" class="text-xl font-extrabold text-slate-800 mt-0.5">Rs. 0.00</p>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="mt-6 flex justify-end">
+                            <button id="payment-submit-btn" type="submit"
+                                    class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-semibold text-sm rounded-lg shadow-sm transition">
+                                <i class="fa-solid fa-receipt mr-2"></i> Save Payment & Update Ledger
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Payments List (Last 15) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-500 mr-2"></i> Last 15 Payments Received
+                    </h2>
+                    <span class="text-xs text-slate-400">Offline Collection Ledger</span>
+                </div>
+                <div id="recent-payments-table-container" class="overflow-x-auto">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ============================================================ -->
+    <!-- MOBILE BOTTOM NAVIGATION BAR (Thumb Friendly)                -->
+    <!-- ============================================================ -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 flex justify-around py-2 px-1 shadow-lg">
+        <button onclick="switchTab('dashboard')" data-tab-bottom="dashboard" class="bottom-nav-btn flex flex-col items-center justify-center text-indigo-400 py-1 px-2 text-xs font-semibold focus:outline-none transition">
+            <i class="fa-solid fa-chart-pie text-lg mb-1"></i>
+            <span>Dashboard</span>
+        </button>
+        <button onclick="switchTab('shops')" data-tab-bottom="shops" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 py-1 px-2 text-xs font-medium focus:outline-none transition">
+            <i class="fa-solid fa-store text-lg mb-1"></i>
+            <span>Shops</span>
+        </button>
+        <button onclick="switchTab('products')" data-tab-bottom="products" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 py-1 px-2 text-xs font-medium focus:outline-none transition">
+            <i class="fa-solid fa-boxes-stacked text-lg mb-1"></i>
+            <span>Products</span>
+        </button>
+        <button onclick="switchTab('new-sale')" data-tab-bottom="new-sale" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 py-1 px-2 text-xs font-medium focus:outline-none transition">
+            <i class="fa-solid fa-cart-plus text-lg mb-1"></i>
+            <span>New Sale</span>
+        </button>
+        <button onclick="switchTab('payments')" data-tab-bottom="payments" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 py-1 px-2 text-xs font-medium focus:outline-none transition">
+            <i class="fa-solid fa-hand-holding-dollar text-lg mb-1"></i>
+            <span>Payments</span>
+        </button>
+    </nav>
+
+    <!-- ============================================================ -->
+    <!-- MODAL 1: SHOP HISTORY & STATEMENT MODAL                      -->
+    <!-- ============================================================ -->
+    <div id="modal-shop-history" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Modal Header -->
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span class="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </span>
+                    <div>
+                        <h3 id="modal-shop-title" class="text-lg font-bold leading-tight">Shop Statement</h3>
+                        <p id="modal-shop-subtitle" class="text-xs text-slate-300">Transaction ledger</p>
+                    </div>
+                </div>
+                <button onclick="closeShopHistoryModal()" class="text-slate-400 hover:text-white text-xl font-bold p-1">&times;</button>
+            </div>
+
+            <!-- Modal Body Scrollable -->
+            <div class="p-6 overflow-y-auto space-y-6">
+                <!-- Shop Profile Summary -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h4 id="modal-shop-name" class="text-lg font-bold text-slate-900"></h4>
+                            <span id="modal-shop-route" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700"></span>
+                        </div>
+                        <p id="modal-shop-phone" class="text-xs text-slate-500 mt-1"></p>
+                    </div>
+                    <div class="text-left sm:text-right">
+                        <span class="text-[11px] font-semibold uppercase text-slate-400 block">Total Due Balance</span>
+                        <span id="modal-shop-due" class="text-xl font-extrabold text-rose-600">Rs. 0.00</span>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <a id="modal-shop-wa-btn" href="#" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
+                        <i class="fa-brands fa-whatsapp text-sm mr-2"></i> WhatsApp Statement
+                    </a>
+                    <button id="modal-shop-sale-btn" class="inline-flex items-center px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold transition">
+                        <i class="fa-solid fa-cart-plus mr-1.5"></i> Bill New Sale
+                    </button>
+                    <button id="modal-shop-pay-btn" class="inline-flex items-center px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold transition">
+                        <i class="fa-solid fa-hand-holding-dollar mr-1.5"></i> Record Payment
+                    </button>
+                </div>
+
+                <!-- Sales History Section -->
+                <div>
+                    <h5 class="text-sm font-bold text-slate-800 mb-2 flex items-center">
+                        <i class="fa-solid fa-cart-shopping text-indigo-600 mr-2"></i> Sales Orders for This Shop
+                    </h5>
+                    <div id="modal-sales-container" class="overflow-x-auto rounded-lg border border-slate-200">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Payments History Section -->
+                <div>
+                    <h5 class="text-sm font-bold text-slate-800 mb-2 flex items-center">
+                        <i class="fa-solid fa-receipt text-emerald-600 mr-2"></i> Payments Received from This Shop
+                    </h5>
+                    <div id="modal-payments-container" class="overflow-x-auto rounded-lg border border-slate-200">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-end">
+                <button onclick="closeShopHistoryModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL 2: SETTINGS & BACKUP / RESTORE MODAL                   -->
+    <!-- ============================================================ -->
+    <div id="modal-backup" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-database text-indigo-600 mr-2"></i> Data Backup & Restore
+                </h3>
+                <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            </div>
+
+            <div class="py-4 space-y-4 text-sm text-slate-600">
+                <p class="text-xs text-slate-500">
+                    Your distribution records are stored securely inside your browser's local storage. Use the tools below to export your data or transfer it to another phone or device.
+                </p>
+
+                <!-- Export Button -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Export Backup</h4>
+                        <p class="text-[11px] text-slate-400">Download all data as a .json file</p>
+                    </div>
+                    <button onclick="exportBackupData()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
+                        <i class="fa-solid fa-download mr-1.5"></i> Export
+                    </button>
+                </div>
+
+                <!-- Import Section -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">Import Backup</h4>
+                    <p class="text-[11px] text-slate-400 mb-3">Upload a previously exported JSON backup file</p>
+                    <input type="file" id="import-file-input" accept=".json" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300">
+                    <button onclick="importBackupData()" class="mt-3 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
+                        <i class="fa-solid fa-upload mr-1.5"></i> Restore From File
+                    </button>
+                </div>
+
+                <!-- Reset Demo Data -->
+                <div class="pt-2 flex items-center justify-between text-xs">
+                    <button onclick="loadSampleDemoData()" class="text-indigo-600 hover:text-indigo-800 font-semibold underline">
+                        Load Sample Demo Data
+                    </button>
+                    <button onclick="clearAllData()" class="text-rose-600 hover:text-rose-800 font-semibold underline">
+                        Clear All Data
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex justify-end">
+                <button onclick="closeBackupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
